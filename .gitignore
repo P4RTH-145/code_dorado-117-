@@ -1,0 +1,13 @@
+# C++ Build Artifacts
+build/
+*.o
+*.obj
+*.exe
+
+# Environment & Secrets
+.env
+.env.local
+
+# OS Artifacts
+Thumbs.db
+.DS_Store
