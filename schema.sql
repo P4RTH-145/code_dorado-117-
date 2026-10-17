@@ -167,8 +167,8 @@ create table if not exists public.audit_logs (
   institute_id text not null references public.institutes(id) on delete cascade,
   user_email text not null,
   user_role text not null,
-  action text not null check (action in ('CREATE', 'UPDATE', 'DELETE')),
-  resource_type text not null check (resource_type in ('course', 'syllabus', 'note', 'practical', 'question', 'student', 'file')),
+  action text not null check (action in ('CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT')),
+  resource_type text not null check (resource_type in ('course', 'syllabus', 'note', 'practical', 'question', 'student', 'file', 'admin', 'auth', 'system')),
   resource_id text,
   resource_title text,
   details jsonb default '{}'::jsonb,
@@ -207,6 +207,10 @@ alter table public.audit_logs enable row level security;
 -- (Allows students belonging to the institute to view courses, notes, syllabus, practicals, question papers)
 create policy "Allow read shared institutes" on public.institutes
   for select using (true);
+create policy "Allow insert institutes" on public.institutes
+  for insert with check (true);
+create policy "Allow update institutes" on public.institutes
+  for update using (true) with check (true);
 
 create policy "Allow read shared courses" on public.courses
   for select using (true);
@@ -316,14 +320,25 @@ values
   ('default-institute', 'sanskartambekar@gmail.com', 'Sanskar Tambekar', '12345', 'admin', 'Computer Science and Engineering', 'Semester 4')
 on conflict (institute_id, email) do nothing;
 
--- Seed Default Courses
+-- Seed Default Courses (Semesters 1 to 8)
 insert into public.courses (id, institute_id, name, code, department, semester, type)
 values
-  (1, 'default-institute', 'Data Structures', 'CS-301', 'Computer Science and Engineering', 'Semester 3', 'Lecture'),
-  (2, 'default-institute', 'Database Management Systems', 'CS-350', 'Computer Science and Engineering', 'Semester 4', 'Practical'),
-  (3, 'default-institute', 'Operating Systems', 'CS-405', 'Computer Science and Engineering', 'Semester 4', 'Lecture'),
-  (4, 'default-institute', 'Digital Electronics', 'CS-210', 'Computer Science and Engineering', 'Semester 3', 'Practical'),
-  (5, 'default-institute', 'Computer Networks', 'CS-330', 'Computer Science and Engineering', 'Semester 4', 'Lecture')
+  (1, 'default-institute', 'Engineering Mathematics I', 'CS-101', 'Computer Science and Engineering', 'Semester 1', 'Lecture'),
+  (2, 'default-institute', 'Programming for Problem Solving', 'CS-102', 'Computer Science and Engineering', 'Semester 1', 'Practical'),
+  (3, 'default-institute', 'Engineering Mathematics II', 'CS-201', 'Computer Science and Engineering', 'Semester 2', 'Lecture'),
+  (4, 'default-institute', 'Data Structures & Algorithms Lab', 'CS-202', 'Computer Science and Engineering', 'Semester 2', 'Practical'),
+  (5, 'default-institute', 'Data Structures', 'CS-301', 'Computer Science and Engineering', 'Semester 3', 'Lecture'),
+  (6, 'default-institute', 'Digital Electronics', 'CS-210', 'Computer Science and Engineering', 'Semester 3', 'Practical'),
+  (7, 'default-institute', 'Discrete Mathematics', 'CS-302', 'Computer Science and Engineering', 'Semester 3', 'Lecture'),
+  (8, 'default-institute', 'Database Management Systems', 'CS-350', 'Computer Science and Engineering', 'Semester 4', 'Practical'),
+  (9, 'default-institute', 'Operating Systems', 'CS-405', 'Computer Science and Engineering', 'Semester 4', 'Lecture'),
+  (10, 'default-institute', 'Computer Networks', 'CS-330', 'Computer Science and Engineering', 'Semester 4', 'Lecture'),
+  (11, 'default-institute', 'Design & Analysis of Algorithms', 'CS-501', 'Computer Science and Engineering', 'Semester 5', 'Lecture'),
+  (12, 'default-institute', 'Software Engineering', 'CS-502', 'Computer Science and Engineering', 'Semester 5', 'Lecture'),
+  (13, 'default-institute', 'Machine Learning', 'CS-601', 'Computer Science and Engineering', 'Semester 6', 'Lecture'),
+  (14, 'default-institute', 'Cloud Computing Lab', 'CS-602', 'Computer Science and Engineering', 'Semester 6', 'Practical'),
+  (15, 'default-institute', 'Information & Cyber Security', 'CS-701', 'Computer Science and Engineering', 'Semester 7', 'Lecture'),
+  (16, 'default-institute', 'Major Project & Seminar', 'CS-801', 'Computer Science and Engineering', 'Semester 8', 'Practical')
 on conflict (id) do nothing;
 
 -- Ensure sequence matches highest seeded id
