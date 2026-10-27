@@ -392,6 +392,13 @@
       </div>
 
       <div id="s-courses" class="stab" style="display:none;">
+        <div class="panel" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2 style="margin:0 0 4px;font-size:16px;">Course Curriculum Catalog</h2>
+            <p style="margin:0;font-size:12px;color:var(--muted);">All official courses for the department. Only authorized administrator accounts can add or delete courses.</p>
+          </div>
+          <div id="studentCourseAdminActions"></div>
+        </div>
         <div class="panel">
           <div class="picker-bar" style="grid-template-columns:1fr 1fr;">
             <div class="field"><label>Semester</label><select id="courseContentSem" onchange="renderCourseContent()">
@@ -566,6 +573,7 @@
       <div id="a-courses" class="atab" style="display:none;">
         <div class="panel">
           <h2 id="courseFormTitle">Add course</h2>
+          <p style="font-size:13px;color:var(--muted);margin:-8px 0 16px;">Only authenticated administrator accounts have permission to create, edit, or delete courses. Changes automatically sync to the shared institute catalog.</p>
           <div id="courseBanner"></div>
           <form id="courseForm">
             <input type="hidden" id="courseEditIndex" value="">
@@ -581,9 +589,34 @@
           </form>
         </div>
         <div class="panel">
-          <h2>All courses</h2>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+            <h2 style="margin:0;">All courses <span id="courseAdminCount" class="mono" style="font-size:12px;color:var(--muted);font-weight:400;"></span></h2>
+            <div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;">
+              <span style="display:inline-block;width:7px;height:7px;background:var(--amber);border-radius:50%;"></span>
+              Admin privileged action: Add and Delete
+            </div>
+          </div>
+          <div class="picker-bar" style="grid-template-columns:2fr 1fr 1fr;align-items:end;margin-bottom:16px;">
+            <div class="field"><label>Search name or code</label><input type="text" id="courseAdminSearch" placeholder="Search courses…" oninput="renderCoursesTable()"></div>
+            <div class="field"><label>Semester</label><select id="courseAdminSemFilter" onchange="renderCoursesTable()">
+              <option value="">All semesters</option>
+              <option value="Semester 1">Semester 1</option>
+              <option value="Semester 2">Semester 2</option>
+              <option value="Semester 3">Semester 3</option>
+              <option value="Semester 4">Semester 4</option>
+              <option value="Semester 5">Semester 5</option>
+              <option value="Semester 6">Semester 6</option>
+              <option value="Semester 7">Semester 7</option>
+              <option value="Semester 8">Semester 8</option>
+            </select></div>
+            <div class="field"><label>Type</label><select id="courseAdminTypeFilter" onchange="renderCoursesTable()">
+              <option value="">All types</option>
+              <option value="Lecture">Lecture</option>
+              <option value="Practical">Practical</option>
+            </select></div>
+          </div>
           <table>
-            <thead><tr><th>Course</th><th>Code</th><th>Semester</th><th>Type</th><th>File</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Course</th><th>Code</th><th>Semester</th><th>Type</th><th>File</th><th></th></tr></thead>
             <tbody id="coursesTableBody"></tbody>
           </table>
         </div>
@@ -1457,13 +1490,13 @@
     const nav = document.getElementById('navLinks');
     const who = document.getElementById('whoTag');
     if(currentSession === 'admin'){
-      nav.innerHTML = `<a onclick="showView('admin')">Dashboard</a><a onclick="logout()">Logout</a>`;
+      nav.innerHTML = `<a onclick="showView('admin');adminTab('a-overview')">Dashboard</a><a onclick="showView('admin');adminTab('a-courses')">Manage courses</a><a onclick="logout()">Logout</a>`;
       who.textContent = currentAdminEmail || 'Admin session';
     } else if(currentSession === 'student'){
       nav.innerHTML = `<a onclick="showView('student')">Dashboard</a><a onclick="logout()">Logout</a>`;
       who.textContent = currentStudent.name;
     } else {
-      nav.innerHTML = `<a onclick="showView('home')">Home</a><a onclick="showView('login')">Student login</a>`;
+      nav.innerHTML = `<a onclick="showView('home')">Home</a><a onclick="showView('login')">Student login</a><a onclick="showView('adminlogin')">Admin login</a>`;
       who.textContent = '';
     }
   }
@@ -1489,13 +1522,36 @@
   }
 
   // ---------------- Admin Login ----------------
-  document.getElementById('adminLoginForm').addEventListener('submit', function(e){
+  document.getElementById('adminLoginForm').addEventListener('submit', async function(e){
     e.preventDefault();
     const username = document.getElementById('adminUsername').value.trim().toLowerCase();
     const password = document.getElementById('adminPassword').value;
     const banner = document.getElementById('adminLoginBanner');
 
-    if(adminEmails.includes(username) && password === ADMIN_PASSWORD){
+    let isAdminValid = adminEmails.includes(username) && password === ADMIN_PASSWORD;
+
+    if(!isAdminValid){
+      const sb = getSupabase();
+      if(sb){
+        banner.innerHTML = `<div class="banner banner-info" style="display:flex;align-items:center;gap:8px;">Verifying administrator credentials with cloud database...</div>`;
+        try{
+          const { data, error } = await sb.from('user_profiles')
+            .select('*')
+            .eq('institute_id', getInstituteId())
+            .ilike('email', username)
+            .eq('password', password)
+            .in('role', ['admin', 'teacher'])
+            .maybeSingle();
+          if(data){
+            isAdminValid = true;
+          }
+        }catch(err){
+          console.warn('[StudySync] Direct cloud admin auth check warning:', err);
+        }
+      }
+    }
+
+    if(isAdminValid){
       currentSession = 'admin';
       currentStudent = null;
       currentAdminEmail = username;
@@ -1505,7 +1561,7 @@
       renderAdmin();
       showView('admin');
     } else {
-      banner.innerHTML = `<div class="banner banner-error">Invalid admin username or password.</div>`;
+      banner.innerHTML = `<div class="banner banner-error">Invalid admin username or password. Only authorized admin accounts can log in here to manage courses.</div>`;
     }
   });
 
@@ -1841,6 +1897,15 @@
     document.getElementById('statPracticals').textContent = practicals.filter(p => myCourseIds.includes(p.courseId)).length;
     document.getElementById('statQuestions').textContent = questions.filter(q => myCourseIds.includes(q.courseId)).length;
 
+    const adminActionsEl = document.getElementById('studentCourseAdminActions');
+    if(adminActionsEl){
+      if(currentSession === 'admin'){
+        adminActionsEl.innerHTML = `<button type="button" class="btn btn-teal" style="font-size:12px;padding:6px 14px;" onclick="showView('admin');adminTab('a-courses');">Manage courses (Admin)</button>`;
+      } else {
+        adminActionsEl.innerHTML = `<span style="font-size:12px;background:var(--teal-tint);color:var(--teal-dark);padding:5px 12px;border-radius:4px;font-weight:500;display:inline-flex;align-items:center;gap:6px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);"></span>Admin managed</span>`;
+      }
+    }
+
     renderCourseList();
     populateStudentTabContent(currentStudentTabId);
   }
@@ -1884,7 +1949,11 @@
       fillOptions(document.getElementById('newStuSem'), SEMESTERS);
       updateSyncStatusBadge();
     }
-    if(id === 'a-courses'){ fillOptions(document.getElementById('courseSem'), SEMESTERS); fillOptions(document.getElementById('courseType'), COURSE_TYPES); }
+    if(id === 'a-courses'){ 
+      fillOptions(document.getElementById('courseSem'), SEMESTERS); 
+      fillOptions(document.getElementById('courseType'), COURSE_TYPES);
+      renderCoursesTable();
+    }
     if(id === 'a-syllabus') fillCourseSelect(document.getElementById('syllabusSubject'), null, null);
     if(id === 'a-notes'){
       fillCourseSelect(document.getElementById('noteSubject'), isLectureCourse, null);
@@ -1894,6 +1963,53 @@
     if(id === 'a-practical') fillCourseSelect(document.getElementById('practicalSubject'), isPracticalCourse, null);
     if(id === 'a-questions') fillCourseSelect(document.getElementById('qSubject'), isLectureCourse, null);
     if(id === 'a-sync') renderAdminSyncTab();
+  }
+
+  function renderCoursesTable(){
+    const body = document.getElementById('coursesTableBody');
+    if(!body) return;
+    const searchInput = document.getElementById('courseAdminSearch');
+    const semFilter = document.getElementById('courseAdminSemFilter');
+    const typeFilter = document.getElementById('courseAdminTypeFilter');
+    const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const sem = semFilter ? semFilter.value : '';
+    const typ = typeFilter ? typeFilter.value : '';
+
+    const countEl = document.getElementById('courseAdminCount');
+    let list = courses.map((c, i) => ({c, i}));
+
+    if(sem) list = list.filter(o => o.c.semester === sem);
+    if(typ) list = list.filter(o => (o.c.type || 'Lecture') === typ);
+    if(q) list = list.filter(o => (o.c.name && o.c.name.toLowerCase().includes(q)) || (o.c.code && o.c.code.toLowerCase().includes(q)));
+
+    if(countEl){
+      countEl.textContent = `· showing ${list.length} of ${courses.length}`;
+    }
+
+    if(!list.length){
+      body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No courses found matching criteria.</td></tr>`;
+      return;
+    }
+
+    body.innerHTML = list.map((o, n) => {
+      const c = o.c;
+      const i = o.i;
+      const typeBadge = (c.type || 'Lecture') === 'Practical'
+        ? `<span style="background:var(--amber-tint);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Practical</span>`
+        : `<span style="background:var(--teal-tint);color:var(--teal);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Lecture</span>`;
+      return `<tr>
+        <td class="mono" style="color:var(--muted);font-size:12px;">${n+1}</td>
+        <td><strong>${escHtml(c.name)}</strong></td>
+        <td class="mono">${escHtml(c.code) || '—'}</td>
+        <td>${escHtml(c.semester)}</td>
+        <td>${typeBadge}</td>
+        <td>${fileCell(c)}</td>
+        <td style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-outline" style="padding:5px 10px;font-size:12px;" onclick="editItem('course',${i})">Edit</button>
+          <button type="button" class="btn btn-danger-outline" style="padding:5px 10px;font-size:12px;" onclick="deleteCourseById(${c.id})">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
   }
 
   function groupedRows(arr, typeOf, rowFn, cols){
@@ -1918,8 +2034,7 @@
     document.getElementById('recentStudentsBody').innerHTML = recent.length ? recent.map(s => `<tr><td>${s.name}</td><td>${s.email}</td><td>${s.semester||'—'}</td></tr>`).join('') : `<tr><td colspan="3">No students added yet.</td></tr>`;
 
     renderStudentsTable();
-
-    document.getElementById('coursesTableBody').innerHTML = groupedRows(courses, c => c.type, (c,i) => `<tr><td>${c.name}</td><td class="mono">${c.code || '—'}</td><td>${c.semester}</td><td>${c.type || 'Lecture'}</td><td>${fileCell(c)}</td><td style="display:flex;gap:8px;"><button class="btn btn-outline" style="padding:5px 10px;font-size:12px;" onclick="editItem('course',${i})">Edit</button><button class="btn btn-danger-outline" onclick="deleteItem('course',${i})">Delete</button></td></tr>`, 6);
+    renderCoursesTable();
 
     renderNotesTable();
 
@@ -2100,8 +2215,24 @@
     const code = document.getElementById('courseCode').value.trim();
     const department = DEPARTMENT;
     const semester = document.getElementById('courseSem').value;
-    const type = document.getElementById('courseType').value;
+    const type = document.getElementById('courseType').value || 'Lecture';
     const banner = document.getElementById('courseBanner');
+
+    if(!name){
+      banner.innerHTML = `<div class="banner banner-error">Please enter a course name.</div>`;
+      return;
+    }
+    if(!semester){
+      banner.innerHTML = `<div class="banner banner-error">Please select a semester.</div>`;
+      return;
+    }
+
+    const editIdx = isEdit ? parseInt(editIndexVal, 10) : -1;
+    const duplicate = courses.find((c, idx) => idx !== editIdx && c.name.toLowerCase() === name.toLowerCase() && c.semester === semester);
+    if(duplicate){
+      banner.innerHTML = `<div class="banner banner-error">A course named "<strong>${escHtml(name)}</strong>" already exists in ${semester}.</div>`;
+      return;
+    }
 
     const fileInputEl = document.getElementById('courseFileInput');
     const chosenFile = fileInputEl.files && fileInputEl.files[0];
@@ -2110,7 +2241,7 @@
       return;
     }
 
-    const target = isEdit ? courses[parseInt(editIndexVal,10)] : {id: (nextCourseId = Math.max(nextCourseId, ...courses.map(c => c.id + 1))), _new:true};
+    const target = isEdit ? courses[editIdx] : {id: (nextCourseId = Math.max(nextCourseId, ...courses.map(c => c.id + 1), 1)), _new:true};
     target.name = name; target.code = code; target.department = department; target.semester = semester; target.type = type;
 
     if(chosenFile){
@@ -2133,24 +2264,65 @@
     }
 
     if(!isEdit){ delete target._new; nextCourseId = target.id + 1; courses.push(target); }
-    banner.innerHTML = `<div class="banner banner-success">${isEdit ? 'Course updated.' : 'Course added.'}</div>`;
 
-    saveData();
-    recordAuditLog(isEdit ? 'UPDATE' : 'CREATE', 'course', target.id, target.name, { code: target.code, semester: target.semester });
+    await saveData();
+    recordAuditLog(isEdit ? 'UPDATE' : 'CREATE', 'course', target.id, target.name, { code: target.code, semester: target.semester, type: target.type });
     cancelEdit('course');
+    banner.innerHTML = `<div class="banner banner-success">${isEdit ? 'Course updated successfully.' : 'Course added successfully!'} <strong>${escHtml(target.name)}</strong> (${escHtml(target.code || 'No code')} · ${escHtml(target.semester)} · ${escHtml(target.type)})</div>`;
+
+    fillCourseSelect(document.getElementById('syllabusSubject'), null, null);
+    fillCourseSelect(document.getElementById('noteSubject'), isLectureCourse, null);
+    fillCourseSelect(document.getElementById('notesFilterCourse'), isLectureCourse, 'All courses');
+    fillCourseSelect(document.getElementById('practicalSubject'), isPracticalCourse, null);
+    fillCourseSelect(document.getElementById('qSubject'), isLectureCourse, null);
+
     renderAdmin();
     adminTab('a-courses');
   });
 
-  function deleteCourse(i){
+  async function deleteCourseById(courseId){
     enforceAdminAccess();
-    const c = courses[i];
+    const c = courses.find(item => item.id === parseInt(courseId, 10));
     if(!c) return;
-    recordAuditLog('DELETE', 'course', c.id, c.name);
+
+    const relatedSyllabus = syllabusFiles.filter(s => s.courseId === c.id);
+    const relatedNotes = notes.filter(n => n.courseId === c.id);
+    const relatedPracticals = practicals.filter(p => p.courseId === c.id);
+    const relatedQuestions = questions.filter(q => q.courseId === c.id);
+    const totalRelated = relatedSyllabus.length + relatedNotes.length + relatedPracticals.length + relatedQuestions.length;
+
+    let confirmMsg = `Are you sure you want to delete course "${c.name}" (${c.code || c.semester})?`;
+    if(totalRelated > 0){
+      confirmMsg += `\n\n⚠️ Notice: This course has ${totalRelated} attached study resource(s) which will also be permanently deleted:\n` +
+        (relatedSyllabus.length ? `• ${relatedSyllabus.length} syllabus item(s)\n` : '') +
+        (relatedNotes.length ? `• ${relatedNotes.length} theory note(s)\n` : '') +
+        (relatedPracticals.length ? `• ${relatedPracticals.length} practical manual(s)\n` : '') +
+        (relatedQuestions.length ? `• ${relatedQuestions.length} question paper(s)\n` : '');
+    }
+
+    if(!confirm(confirmMsg)) return;
+
+    const banner = document.getElementById('courseBanner');
+    if(banner) banner.innerHTML = `<div class="banner banner-info">Deleting course "${escHtml(c.name)}"...</div>`;
+
+    recordAuditLog('DELETE', 'course', c.id, c.name, { code: c.code, semester: c.semester, relatedDeleted: totalRelated });
+
     const sb = getSupabase();
     if(sb){
-      sb.from('courses').delete().eq('institute_id', INSTITUTE_ID).eq('id', c.id).catch(() => {});
+      const inst = getInstituteId();
+      try{
+        await Promise.all([
+          sb.from('courses').delete().eq('institute_id', inst).eq('id', c.id),
+          sb.from('syllabus_files').delete().eq('institute_id', inst).eq('course_id', c.id),
+          sb.from('notes').delete().eq('institute_id', inst).eq('course_id', c.id),
+          sb.from('practicals').delete().eq('institute_id', inst).eq('course_id', c.id),
+          sb.from('question_papers').delete().eq('institute_id', inst).eq('course_id', c.id)
+        ]);
+      }catch(err){
+        console.warn('[StudySync] Cloud course delete error:', err);
+      }
     }
+
     [syllabusFiles, notes, practicals, questions].forEach(arr => {
       arr.forEach(item => { if(item.courseId === c.id && item.fileURL) window.storage.delete(item.fileURL, true).catch(() => {}); });
     });
@@ -2159,7 +2331,28 @@
     practicals = practicals.filter(p => p.courseId !== c.id);
     questions = questions.filter(q => q.courseId !== c.id);
     if(c.fileURL) window.storage.delete(c.fileURL, true).catch(() => {});
-    courses.splice(i,1);
+
+    const idx = courses.findIndex(item => item.id === c.id);
+    if(idx !== -1) courses.splice(idx, 1);
+
+    cancelEdit('course');
+    await saveData();
+
+    fillCourseSelect(document.getElementById('syllabusSubject'), null, null);
+    fillCourseSelect(document.getElementById('noteSubject'), isLectureCourse, null);
+    fillCourseSelect(document.getElementById('notesFilterCourse'), isLectureCourse, 'All courses');
+    fillCourseSelect(document.getElementById('practicalSubject'), isPracticalCourse, null);
+    fillCourseSelect(document.getElementById('qSubject'), isLectureCourse, null);
+
+    if(banner) banner.innerHTML = `<div class="banner banner-success">Course "<strong>${escHtml(c.name)}</strong>" and its linked resources were deleted successfully.</div>`;
+
+    renderAdmin();
+    adminTab('a-courses');
+  }
+
+  function deleteCourse(i){
+    const c = courses[i];
+    if(c) deleteCourseById(c.id);
   }
 
   // ---------------- Generic Resource Handlers ----------------
@@ -2184,7 +2377,9 @@
   function deleteItem(type, i){
     enforceAdminAccess();
     if(type === 'course'){
-      deleteCourse(i);
+      const c = courses[i];
+      if(c) deleteCourseById(c.id);
+      return;
     } else {
       const cfg = resourceConfig[type];
       const arr = cfg.arr();
@@ -2193,7 +2388,7 @@
         recordAuditLog('DELETE', type, item.id || (i + 1), item.title || item.name || type);
         const sb = getSupabase();
         if(sb && cfg.table && item.id){
-          sb.from(cfg.table).delete().eq('institute_id', INSTITUTE_ID).eq('id', item.id).catch(() => {});
+          sb.from(cfg.table).delete().eq('institute_id', getInstituteId()).eq('id', item.id).catch(() => {});
         }
         if(item.fileURL) window.storage.delete(item.fileURL, true).catch(() => {});
       }
@@ -2234,6 +2429,10 @@
     document.getElementById(cfg.cancelBtn).style.display = 'none';
     if(cfg.currentFileEl) document.getElementById(cfg.currentFileEl).textContent = '';
     document.getElementById(formIdFor(type)).reset();
+    if(type === 'course'){
+      fillOptions(document.getElementById('courseSem'), SEMESTERS);
+      fillOptions(document.getElementById('courseType'), COURSE_TYPES);
+    }
   }
 
   function formIdFor(type){
