@@ -54,3 +54,4 @@ export const QuizZonePage: React.FC = () => {
     </div>
   );
 };
+

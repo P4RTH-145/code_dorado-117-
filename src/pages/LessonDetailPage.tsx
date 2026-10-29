@@ -280,3 +280,4 @@ export const LessonDetailPage: React.FC = () => {
     </div>
   );
 };
+

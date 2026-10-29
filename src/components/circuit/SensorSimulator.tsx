@@ -472,3 +472,4 @@ export const SensorSimulator: React.FC = () => {
     </div>
   );
 };
+

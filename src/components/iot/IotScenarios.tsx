@@ -618,3 +618,4 @@ export const IotScenarios: React.FC = () => {
     </div>
   );
 };
+

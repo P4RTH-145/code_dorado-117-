@@ -22,3 +22,4 @@ export const CodingArenaPage: React.FC = () => {
     </div>
   );
 };
+

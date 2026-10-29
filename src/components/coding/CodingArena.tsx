@@ -300,3 +300,4 @@ export const CodingArena: React.FC = () => {
     </div>
   );
 };
+

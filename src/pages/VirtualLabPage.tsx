@@ -78,3 +78,4 @@ export const VirtualLabPage: React.FC = () => {
     </div>
   );
 };
+

@@ -22,3 +22,4 @@ export const IotSimulationsPage: React.FC = () => {
     </div>
   );
 };
+

@@ -550,3 +550,4 @@ export const LogicGateSimulator: React.FC = () => {
     </div>
   );
 };
+
