@@ -86,3 +86,4 @@ export function getLevelInfo(xp: number) {
     xpToNext: nextTier ? nextTier.minXp - xp : 0
   };
 }
+

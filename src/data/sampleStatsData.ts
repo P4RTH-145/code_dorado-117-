@@ -123,3 +123,4 @@ export const BLANK_USER_PROGRESS: UserProgress = {
   ],
   isDemoData: false
 };
+

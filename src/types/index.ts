@@ -148,3 +148,4 @@ export interface ChatMessage {
   suggestedFollowUps?: string[];
   isDemoMode?: boolean;
 }
+

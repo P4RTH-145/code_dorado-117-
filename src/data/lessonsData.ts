@@ -454,3 +454,4 @@ export const CATEGORIES_META: { id: SubjectCategory; label: string; icon: string
   { id: 'iot', label: 'Internet of Things (IoT)', icon: 'Wifi', count: 1, color: 'from-teal-500 to-emerald-600' },
   { id: 'ai-ml', label: 'AI & Machine Learning in ENTC', icon: 'Sparkles', count: 1, color: 'from-purple-500 to-cyan-500' }
 ];
+

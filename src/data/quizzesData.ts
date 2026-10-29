@@ -234,3 +234,4 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     xpReward: 25
   }
 ];
+
