@@ -34,9 +34,10 @@ Write a function \`getLedState(currentMillis, periodMs)\` that returns:
     xpReward: 50,
     functionName: 'getLedState',
     testCases: [
-      { inputDescription: 'getLedState(100, 1000)', args: [100, 1000], expected: 1, explanation: '100ms is in first half of 1000ms period (0-499ms)' },
-      { inputDescription: 'getLedState(650, 1000)', args: [650, 1000], expected: 0, explanation: '650ms is in second half of 1000ms period (500-999ms)' },
-      { inputDescription: 'getLedState(2150, 500)', args: [2150, 500], expected: 0, explanation: '2150 % 500 = 150ms, wait: 500/2=250. 150 < 250 -> 1' },
+      { inputDescription: 'getLedState(100, 1000)', args: [100, 1000], expected: 1, explanation: '100ms is in first half of 1000ms period (0-499ms) -> HIGH (1)' },
+      { inputDescription: 'getLedState(650, 1000)', args: [650, 1000], expected: 0, explanation: '650ms is in second half of 1000ms period (500-999ms) -> LOW (0)' },
+      { inputDescription: 'getLedState(2150, 500)', args: [2150, 500], expected: 1, explanation: '2150 % 500 = 150ms (< 250ms half-period) -> HIGH (1)' },
+      { inputDescription: 'getLedState(2400, 500)', args: [2400, 500], expected: 0, explanation: '2400 % 500 = 400ms (>= 250ms half-period) -> LOW (0)' },
       { inputDescription: 'getLedState(0, 0)', args: [0, 0], expected: 0, explanation: 'Period <= 0 returns 0' }
     ]
   },

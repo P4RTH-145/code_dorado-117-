@@ -149,3 +149,14 @@ export interface ChatMessage {
   isDemoMode?: boolean;
 }
 
+
+export type UserRole = 'admin' | 'student';
+
+export interface UserAccount {
+  id: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  profile: UserProfile;
+  createdAt: string;
+}

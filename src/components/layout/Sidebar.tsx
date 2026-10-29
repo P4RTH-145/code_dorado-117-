@@ -13,7 +13,9 @@ import {
   ChevronRight,
   ExternalLink,
   Zap,
-  Activity
+  Activity,
+  ShieldCheck,
+  UserPlus
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getLevelInfo } from '../../data/badgesData';
@@ -24,11 +26,14 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { progress } = useApp();
+  const { progress, currentUser } = useApp();
   const levelInfo = getLevelInfo(progress.totalXp);
 
   const navLinks = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard, badge: null },
+    ...(currentUser?.role === 'admin' ? [
+      { to: '/admin', label: 'Admin Student Portal', icon: ShieldCheck, badge: 'HOD' }
+    ] : []),
     { to: '/learn', label: 'Learn ENTC', icon: BookOpen, badge: `${progress.completedLessons.length} done` },
     { to: '/lab', label: 'Virtual Electronics Lab', icon: Cpu, badge: 'Interactive' },
     { to: '/ai-tutor', label: 'AI Learning Assistant', icon: Bot, badge: 'AI' },

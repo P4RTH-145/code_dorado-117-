@@ -57,11 +57,17 @@ export const codeRunnerService = {
         'console',
         `
         "use strict";
+        let __resolvedFn;
         ${userCode}
-        if (typeof ${challenge.functionName} !== 'function') {
-          throw new Error("Function '${challenge.functionName}' was not defined or is not a function.");
+        try {
+          if (typeof ${challenge.functionName} === 'function') {
+            __resolvedFn = ${challenge.functionName};
+          }
+        } catch (_) {}
+        if (typeof __resolvedFn !== 'function') {
+          throw new Error("Function '${challenge.functionName}' was not found. Please ensure your function is named '${challenge.functionName}'.");
         }
-        return ${challenge.functionName};
+        return __resolvedFn;
         `
       );
 

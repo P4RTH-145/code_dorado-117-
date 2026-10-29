@@ -66,3 +66,4 @@ CREATE POLICY "Allow public read/write profiles" ON public.profiles FOR ALL USIN
 CREATE POLICY "Allow public read/write progress" ON public.user_progress FOR ALL USING (true);
 CREATE POLICY "Allow public read/write attempts" ON public.quiz_attempts FOR ALL USING (true);
 CREATE POLICY "Allow public read/write activity" ON public.activity_stream FOR ALL USING (true);
+

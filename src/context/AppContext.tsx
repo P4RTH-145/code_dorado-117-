@@ -1,15 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import confetti from 'canvas-confetti';
-import { UserProgress, UserProfile, AppSettings, Badge, RecentActivity } from '../types';
+import { UserProgress, UserProfile, AppSettings, Badge, RecentActivity, UserAccount } from '../types';
 import { storageService, DEFAULT_SETTINGS } from '../services/storageService';
+import { authService } from '../services/authService';
 import { INITIAL_BADGES } from '../data/badgesData';
 
 interface AppContextType {
+  currentUser: UserAccount | null;
+  accounts: UserAccount[];
   progress: UserProgress;
   profile: UserProfile;
   settings: AppSettings;
   badges: Badge[];
   newBadgeUnlocked: Badge | null;
+  login: (email: string, pass: string) => { success: boolean; error?: string };
+  logout: () => void;
+  switchAccount: (userId: string) => void;
+  addStudent: (data: { name: string; email: string; password: string; rollNumber: string; branch?: string; semester?: string }) => { success: boolean; error?: string };
+  deleteStudent: (id: string) => boolean;
   clearNewBadge: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   updateSettings: (updates: Partial<AppSettings>) => void;
@@ -24,8 +32,16 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [progress, setProgress] = useState<UserProgress>(() => storageService.loadProgress());
-  const [profile, setProfile] = useState<UserProfile>(() => storageService.loadProfile());
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => authService.getCurrentUser());
+  const [accounts, setAccounts] = useState<UserAccount[]>(() => authService.getAccounts());
+  const [progress, setProgress] = useState<UserProgress>(() => {
+    const user = authService.getCurrentUser();
+    return user ? authService.getUserProgress(user.id) : storageService.loadProgress();
+  });
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const user = authService.getCurrentUser();
+    return user ? user.profile : storageService.loadProfile();
+  });
   const [settings, setSettings] = useState<AppSettings>(() => storageService.loadSettings());
   const [newBadgeUnlocked, setNewBadgeUnlocked] = useState<Badge | null>(null);
 
@@ -41,10 +57,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [settings.theme]);
 
-  // Save changes to storage
+  // Save changes to current user's progress
   useEffect(() => {
+    if (currentUser) {
+      authService.saveUserProgress(currentUser.id, progress);
+    }
     storageService.saveProgress(progress);
-  }, [progress]);
+  }, [progress, currentUser]);
 
   useEffect(() => {
     storageService.saveProfile(profile);
@@ -53,6 +72,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     storageService.saveSettings(settings);
   }, [settings]);
+
+  const login = (email: string, pass: string) => {
+    const res = authService.login(email, pass);
+    if (res.success && res.user) {
+      setCurrentUser(res.user);
+      setProfile(res.user.profile);
+      setProgress(authService.getUserProgress(res.user.id));
+      setAccounts(authService.getAccounts());
+      return { success: true };
+    }
+    return { success: false, error: res.error || 'Authentication failed' };
+  };
+
+  const logout = () => {
+    authService.logout();
+    setCurrentUser(null);
+  };
+
+  const switchAccount = (userId: string) => {
+    const all = authService.getAccounts();
+    const target = all.find(a => a.id === userId);
+    if (target) {
+      localStorage.setItem('entc_current_user_v2', JSON.stringify(target));
+      setCurrentUser(target);
+      setProfile(target.profile);
+      setProgress(authService.getUserProgress(target.id));
+    }
+  };
+
+  const addStudent = (data: { name: string; email: string; password: string; rollNumber: string; branch?: string; semester?: string }) => {
+    const res = authService.addStudent(data);
+    if (res.success) {
+      setAccounts(authService.getAccounts());
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  };
+
+  const deleteStudent = (id: string) => {
+    const ok = authService.deleteStudent(id);
+    if (ok) {
+      setAccounts(authService.getAccounts());
+    }
+    return ok;
+  };
 
   const triggerConfetti = () => {
     try {
@@ -63,7 +127,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         colors: ['#06B6D4', '#3B82F6', '#8B5CF6', '#10B981', '#F59E0B']
       });
     } catch {
-      // safe fallback if canvas not available
+      // safe fallback
     }
   };
 
@@ -118,7 +182,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const percentage = Math.round((score / total) * 100);
       const prevBest = prev.bestQuizScores[quizId] || 0;
       const isNewBest = percentage > prevBest;
-      const awardedXp = isNewBest ? xp : Math.round(xp * 0.2); // partial xp on replay
+      const awardedXp = isNewBest ? xp : Math.round(xp * 0.2);
 
       const newActivity: RecentActivity = {
         id: 'act-' + Date.now(),
@@ -223,7 +287,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setNewBadgeUnlocked(null);
   };
 
-  // Compile full badges with live progress
   const badgesWithStatus: Badge[] = INITIAL_BADGES.map(b => {
     const isUnlocked = progress.unlockedBadgeIds.includes(b.id);
     const curr = progress.badgeProgress[b.id] || (isUnlocked ? b.progressMax : 0);
@@ -237,11 +300,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider
       value={{
+        currentUser,
+        accounts,
         progress,
         profile,
         settings,
         badges: badgesWithStatus,
         newBadgeUnlocked,
+        login,
+        logout,
+        switchAccount,
+        addStudent,
+        deleteStudent,
         clearNewBadge,
         updateProfile,
         updateSettings,
@@ -265,4 +335,3 @@ export const useApp = () => {
   }
   return context;
 };
-

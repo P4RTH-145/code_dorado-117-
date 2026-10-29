@@ -1,16 +1,18 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Zap, 
   Flame, 
   Menu, 
   X, 
   Sparkles, 
-  ShieldAlert, 
+  ShieldCheck, 
   Settings, 
   Sun, 
   Moon,
-  Laptop
+  LogOut,
+  UserCheck,
+  UserPlus
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getLevelInfo } from '../../data/badgesData';
@@ -21,13 +23,18 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
-  const { progress, profile, settings, updateSettings } = useApp();
-  const location = useLocation();
+  const { progress, profile, settings, updateSettings, currentUser, logout } = useApp();
+  const navigate = useNavigate();
   const levelInfo = getLevelInfo(progress.totalXp);
 
   const toggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'midnight' : 'light';
     updateSettings({ theme: nextTheme });
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -59,17 +66,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu, isMobileMenu
           </Link>
         </div>
 
-        {/* Center: Live Data indicator */}
+        {/* Center: Live Data indicator & Role */}
         <div className="hidden md:flex items-center gap-2">
-          {progress.isDemoData ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-              <span>Sample Demo Mode</span>
-            </div>
+          {currentUser?.role === 'admin' ? (
+            <Link
+              to="/admin"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/40 text-purple-300 text-xs font-bold hover:bg-purple-500/25 transition-colors"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
+              <span>Admin Portal (Add Students)</span>
+            </Link>
           ) : (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>Live Student Workspace</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-medium">
+              <UserCheck className="h-3.5 w-3.5" />
+              <span>Student Workspace</span>
             </div>
           )}
 
@@ -82,8 +92,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu, isMobileMenu
           </div>
         </div>
 
-        {/* Right: Gamification Badges, Theme & Profile */}
-        <div className="flex items-center gap-2.5 sm:gap-4">
+        {/* Right: Gamification Badges, Theme, Account & Logout */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Streak Counter */}
           <div 
             title={`${progress.currentStreak} Day Study Streak`}
@@ -111,22 +121,43 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu, isMobileMenu
             {settings.theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
 
-          {/* Student Profile Quick Link */}
-          <Link
-            to="/settings"
-            className="flex items-center gap-2 pl-2 border-l border-slate-800 text-slate-300 hover:text-white transition-colors"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 font-semibold text-xs text-white ring-2 ring-cyan-500/30">
-              {profile.name.charAt(0)}
+          {/* User Profile / Switch */}
+          {currentUser ? (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <Link
+                to="/settings"
+                className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+                title="Profile & Settings"
+              >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-xs text-white ring-2 ${
+                  currentUser.role === 'admin' ? 'bg-purple-600 ring-purple-500/40' : 'bg-blue-600 ring-cyan-500/40'
+                }`}>
+                  {profile.name.charAt(0)}
+                </div>
+                <div className="hidden xl:block text-left">
+                  <div className="text-xs font-bold leading-none truncate max-w-[120px]">{profile.name}</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-mono">{currentUser.role}</div>
+                </div>
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors"
+                title="Sign Out / Switch Account"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
-            <div className="hidden xl:block text-left">
-              <div className="text-xs font-semibold leading-none">{profile.name}</div>
-              <div className="text-[10px] text-slate-400">{profile.branch}</div>
-            </div>
-          </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>
   );
 };
-

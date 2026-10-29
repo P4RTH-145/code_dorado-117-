@@ -156,6 +156,15 @@ export const CodingArena: React.FC = () => {
                   <Eye className="h-3.5 w-3.5 text-cyan-400" />
                   <span>{showSolution ? 'Hide Solution' : 'Reveal Solution'}</span>
                 </button>
+
+                <button
+                  onClick={() => { setCode(challenge.solutionCode); setReport(null); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs text-emerald-300 transition-colors"
+                  title="Load reference working solution into the editor"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Insert Solution</span>
+                </button>
               </div>
 
               {showHint && (

@@ -14,6 +14,8 @@ import { QuizZonePage } from './pages/QuizZonePage';
 import { IotSimulationsPage } from './pages/IotSimulationsPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AdminPage } from './pages/AdminPage';
+import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const App: React.FC = () => {
@@ -21,9 +23,11 @@ export const App: React.FC = () => {
     <AppProvider>
       <HashRouter>
         <Routes>
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<MainLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="dashboard" element={<Navigate to="/" replace />} />
+            <Route path="admin" element={<AdminPage />} />
             <Route path="learn" element={<LearnPage />} />
             <Route path="learn/:lessonId" element={<LessonDetailPage />} />
             <Route path="lab" element={<VirtualLabPage />} />
