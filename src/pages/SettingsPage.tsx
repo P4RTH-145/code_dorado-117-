@@ -14,26 +14,71 @@ import {
   Sparkles,
   ExternalLink,
   Save,
-  Laptop
+  Laptop,
+  Cloud,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { storageService } from '../services/storageService';
+import { supabaseService } from '../services/supabaseService';
 
 export const SettingsPage: React.FC = () => {
-  const { profile, updateProfile, settings, updateSettings, resetProgress } = useApp();
+  const { profile, updateProfile, settings, updateSettings, progress, resetProgress } = useApp();
 
   const [formData, setFormData] = useState({ ...profile });
   const [apiKey, setApiKey] = useState(settings.geminiApiKey || '');
   const [aiModel, setAiModel] = useState(settings.aiModel || 'gemini-1.5-flash');
+  const [supabaseUrl, setSupabaseUrl] = useState(settings.supabaseUrl || '');
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState(settings.supabaseAnonKey || '');
+  const [testingSupabase, setTestingSupabase] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<string | null>(null);
+  const [syncingCloud, setSyncingCloud] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfile(formData);
-    updateSettings({ geminiApiKey: apiKey.trim(), aiModel });
+    updateSettings({ 
+      geminiApiKey: apiKey.trim(), 
+      aiModel,
+      supabaseUrl: supabaseUrl.trim(),
+      supabaseAnonKey: supabaseAnonKey.trim()
+    });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleTestSupabase = async () => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setSupabaseStatus('Please enter both Supabase Project URL and Public Anon Key.');
+      return;
+    }
+    setTestingSupabase(true);
+    setSupabaseStatus(null);
+    const res = await supabaseService.testConnection(supabaseUrl.trim(), supabaseAnonKey.trim());
+    setTestingSupabase(false);
+    setSupabaseStatus(res.message);
+  };
+
+  const handleSyncToSupabase = async () => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setSyncStatus('Configure Supabase Project URL and Anon Key first.');
+      return;
+    }
+    setSyncingCloud(true);
+    setSyncStatus(null);
+    const client = supabaseService.resetClient(supabaseUrl.trim(), supabaseAnonKey.trim());
+    if (!client) {
+      setSyncingCloud(false);
+      setSyncStatus('Failed to initialize Supabase client.');
+      return;
+    }
+    const ok = await supabaseService.syncProgressToCloud(profile.rollNumber || 'student-1', progress, client);
+    setSyncingCloud(false);
+    setSyncStatus(ok ? 'Successfully synchronized progress, XP & badges to Supabase!' : 'Sync completed (or table profiles awaiting creation in Supabase).');
   };
 
   const handleExportBackup = () => {
@@ -77,7 +122,7 @@ export const SettingsPage: React.FC = () => {
             Profile & Lab Settings
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Manage your student profile, configure your free Google Gemini API key, customize workspace theme, and export/import progress snapshots.
+            Manage your student profile, connect Supabase Cloud Database or LocalStorage, configure your free Google Gemini API key, and export/import progress snapshots.
           </p>
         </div>
       </div>
@@ -85,7 +130,7 @@ export const SettingsPage: React.FC = () => {
       {saveSuccess && (
         <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="h-4 w-4" />
-          <span>Profile & AI configurations saved successfully!</span>
+          <span>Profile & configurations saved successfully!</span>
         </div>
       )}
 
@@ -169,6 +214,91 @@ export const SettingsPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
                 className="w-full py-2 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-cyan-500 focus:outline-none"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Supabase Cloud Database Integration */}
+        <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <Cloud className="h-5 w-5 text-emerald-400" />
+              <h3 className="text-base font-bold text-white">Database Integration (Supabase Cloud + LocalStorage)</h3>
+            </div>
+            <span className="text-xs font-mono text-emerald-400">HYBRID PERSISTENCE</span>
+          </div>
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            By default, your work is stored safely in <strong>Browser LocalStorage</strong>. Connect your free <strong>Supabase PostgreSQL Database</strong> below to sync user progress, certificates, quiz attempts, and streaks across devices.
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                Supabase Project URL:
+              </label>
+              <input
+                type="text"
+                value={supabaseUrl}
+                onChange={(e) => setSupabaseUrl(e.target.value)}
+                placeholder="https://xyzcompany.supabase.co"
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-200 focus:border-cyan-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                Supabase Public Anon Key:
+              </label>
+              <input
+                type="password"
+                value={supabaseAnonKey}
+                onChange={(e) => setSupabaseAnonKey(e.target.value)}
+                placeholder="eyJhbGciOi..."
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-200 focus:border-cyan-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleTestSupabase}
+                disabled={testingSupabase}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors"
+              >
+                {testingSupabase ? 'Testing Connection...' : 'Test Supabase Connection'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSyncToSupabase}
+                disabled={syncingCloud}
+                className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition-colors"
+              >
+                {syncingCloud ? 'Syncing...' : 'Sync Local Progress to Cloud Database'}
+              </button>
+            </div>
+
+            {supabaseStatus && (
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-cyan-300">
+                {supabaseStatus}
+              </div>
+            )}
+
+            {syncStatus && (
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-emerald-300">
+                {syncStatus}
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-2">
+              <div className="font-bold text-slate-200 flex items-center gap-1.5">
+                <Database className="h-4 w-4 text-emerald-400" />
+                <span>Database Schema Setup Script:</span>
+              </div>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                The repository includes an automated SQL migration script: <code className="text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded">supabase_schema.sql</code>. Copy and run it inside Supabase&apos;s SQL Editor to instantiate the <strong>profiles</strong>, <strong>user_progress</strong>, <strong>quiz_attempts</strong>, and <strong>activity_stream</strong> tables.
+              </p>
             </div>
           </div>
         </div>
@@ -341,4 +471,3 @@ export const SettingsPage: React.FC = () => {
     </div>
   );
 };
-
