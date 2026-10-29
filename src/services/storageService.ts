@@ -8,7 +8,7 @@ const SETTINGS_KEY = 'entc_lab_settings_v1';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'midnight',
-  aiProvider: 'gemini',
+  aiProvider: 'demo',
   geminiApiKey: '',
   aiModel: 'gemini-1.5-flash',
   openaiApiKey: '',
