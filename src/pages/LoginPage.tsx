@@ -11,13 +11,13 @@ import {
   CheckCircle2, 
   AlertCircle,
   Cpu,
-  UserPlus,
+  Trash2,
   Users
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const LoginPage: React.FC = () => {
-  const { login, accounts } = useApp();
+  const { login, accounts, deleteStudent } = useApp();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -51,6 +51,13 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const hasDemoUsers = accounts.some(a => a.id === 'student-1' || a.id === 'student-2');
+
+  const handleDeleteDemoUsers = () => {
+    deleteStudent('student-1');
+    deleteStudent('student-2');
+  };
+
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center py-10 px-4 sm:px-6">
       <div className="max-w-md w-full space-y-6">
@@ -67,78 +74,65 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick Demo Logins Box */}
+        {/* Dynamic Accounts Quick Login Box */}
         <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-slate-300">
             <span className="flex items-center gap-1.5 text-cyan-400">
               <Sparkles className="h-3.5 w-3.5" />
-              Pre-Configured Demo Accounts (1-Click Login):
+              Available Accounts ({accounts.length}):
             </span>
+            {hasDemoUsers && (
+              <button
+                type="button"
+                onClick={handleDeleteDemoUsers}
+                className="text-[10px] text-rose-400 hover:text-rose-300 flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
+                title="Delete default demo student accounts"
+              >
+                <Trash2 className="h-3 w-3" />
+                <span>Delete Demo Users</span>
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 gap-2 text-xs">
-            {/* Admin Demo Button */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@entc.edu', 'admin123')}
-              className="p-3 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-purple-500/30 hover:border-purple-500 text-left transition-all flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-300">
-                  <ShieldCheck className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-white group-hover:text-purple-300 flex items-center gap-1.5">
-                    <span>Admin: Dr. Rajesh Kulkarni</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">HOD</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">admin@entc.edu / admin123</div>
-                </div>
-              </div>
-              <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-transform" />
-            </button>
+          <div className="grid grid-cols-1 gap-2 text-xs max-h-60 overflow-y-auto pr-1">
+            {accounts.map((acc) => {
+              const isAdmin = acc.role === 'admin';
 
-            {/* Student 1 Demo Button */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('aarav@entc.edu', 'student123')}
-              className="p-3 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-cyan-500/30 hover:border-cyan-500 text-left transition-all flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300">
-                  <GraduationCap className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-white group-hover:text-cyan-300 flex items-center gap-1.5">
-                    <span>Student 1: Aarav Sharma</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-mono">Lvl 3</span>
+              return (
+                <button
+                  key={acc.id}
+                  type="button"
+                  onClick={() => handleQuickLogin(acc.email, acc.password)}
+                  className={`p-3 rounded-xl bg-slate-950 hover:bg-slate-800/80 border text-left transition-all flex items-center justify-between group ${
+                    isAdmin
+                      ? 'border-purple-500/30 hover:border-purple-500'
+                      : 'border-cyan-500/30 hover:border-cyan-500'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-1.5 rounded-lg ${
+                      isAdmin ? 'bg-purple-500/20 text-purple-300' : 'bg-cyan-500/20 text-cyan-300'
+                    }`}>
+                      {isAdmin ? <ShieldCheck className="h-4 w-4" /> : <GraduationCap className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <div className="font-bold text-white group-hover:text-cyan-300 flex items-center gap-1.5">
+                        <span className="truncate max-w-[200px]">{acc.profile.name}</span>
+                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono uppercase ${
+                          isAdmin ? 'bg-purple-500/20 text-purple-300' : 'bg-cyan-500/20 text-cyan-300'
+                        }`}>
+                          {acc.role}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {acc.email} / {acc.password}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-slate-400">aarav@entc.edu / student123</div>
-                </div>
-              </div>
-              <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-transform" />
-            </button>
-
-            {/* Student 2 Demo Button */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('sneha@entc.edu', 'student123')}
-              className="p-3 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-blue-500/30 hover:border-blue-500 text-left transition-all flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-300">
-                  <GraduationCap className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-white group-hover:text-blue-300 flex items-center gap-1.5">
-                    <span>Student 2: Sneha Patel</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 font-mono">Lvl 2</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">sneha@entc.edu / student123</div>
-                </div>
-              </div>
-              <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-transform" />
-            </button>
+                  <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-transform" />
+                </button>
+              );
+            })}
           </div>
         </div>
 

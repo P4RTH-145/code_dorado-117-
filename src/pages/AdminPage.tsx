@@ -72,6 +72,12 @@ export const AdminPage: React.FC = () => {
 
   const studentAccounts = accounts.filter(a => a.role === 'student');
 
+  const handleDeleteDemoStudents = () => {
+    deleteStudent('student-1');
+    deleteStudent('student-2');
+    setFormMsg({ type: 'success', text: 'All demo student accounts (Aarav & Sneha) have been removed!' });
+  };
+
   return (
     <div className="space-y-8 pb-12">
       {/* Header Banner */}
@@ -205,69 +211,87 @@ export const AdminPage: React.FC = () => {
         {/* Right Column: Enrolled Students Directory */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-6 shadow-xl flex-1">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800 mb-4">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-purple-400" />
                 <h3 className="text-base font-bold text-white">Active Student Records</h3>
               </div>
-              <span className="text-xs font-mono text-cyan-400">{studentAccounts.length} Active Accounts</span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDeleteDemoStudents}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-semibold transition-colors"
+                  title="Remove default demo accounts (Aarav & Sneha)"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Demo Students</span>
+                </button>
+                <span className="text-xs font-mono text-cyan-400">{studentAccounts.length} Active</span>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {studentAccounts.map((student) => {
-                const sProgress = authService.getUserProgress(student.id);
+            {studentAccounts.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-800 rounded-xl space-y-2">
+                <Users className="h-8 w-8 text-slate-600 mx-auto" />
+                <p>No student accounts currently enrolled.</p>
+                <p className="text-[11px] text-slate-500">Use the form on the left to add your real students.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {studentAccounts.map((student) => {
+                  const sProgress = authService.getUserProgress(student.id);
 
-                return (
-                  <div
-                    key={student.id}
-                    className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors hover:border-slate-700"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white font-bold text-sm">
-                        {student.profile.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white flex items-center gap-2">
-                          <span>{student.profile.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 font-mono">
-                            {student.profile.rollNumber}
-                          </span>
+                  return (
+                    <div
+                      key={student.id}
+                      className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors hover:border-slate-700"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white font-bold text-sm">
+                          {student.profile.name.charAt(0)}
                         </div>
-                        <div className="text-[11px] text-slate-400">{student.email}</div>
-                        <div className="flex items-center gap-3 text-[10px] text-slate-400 mt-1 font-mono">
-                          <span className="text-cyan-400 font-bold">{sProgress.totalXp} XP</span>
-                          <span>{sProgress.completedLessons.length} Lessons</span>
-                          <span>{sProgress.completedChallenges.length} Solved</span>
+                        <div>
+                          <div className="text-xs font-bold text-white flex items-center gap-2">
+                            <span>{student.profile.name}</span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 font-mono">
+                              {student.profile.rollNumber}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">{student.email}</div>
+                          <div className="flex items-center gap-3 text-[10px] text-slate-400 mt-1 font-mono">
+                            <span className="text-cyan-400 font-bold">{sProgress.totalXp} XP</span>
+                            <span>{sProgress.completedLessons.length} Lessons</span>
+                            <span>{sProgress.completedChallenges.length} Solved</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                      {/* Switch to this student session */}
-                      <button
-                        onClick={() => switchAccount(student.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-200 transition-colors"
-                        title="Log in as this student to view workspace"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 text-cyan-400" />
-                        <span>Switch</span>
-                      </button>
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        {/* Switch to this student session */}
+                        <button
+                          onClick={() => switchAccount(student.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-200 transition-colors"
+                          title="Log in as this student to view workspace"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 text-cyan-400" />
+                          <span>Switch</span>
+                        </button>
 
-                      {/* Delete student if not default student-1 */}
-                      {student.id !== 'student-1' && student.id !== 'student-2' && (
+                        {/* Delete ANY student */}
                         <button
                           onClick={() => deleteStudent(student.id)}
                           className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
-                          title="Delete Student"
+                          title="Delete Student Account"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
