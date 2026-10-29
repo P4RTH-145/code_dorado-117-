@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#0B1120"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" stroke="#06B6D4" stroke-width="2" stroke-opacity="0.4"/>
+  <rect x="18" y="18" width="28" height="28" rx="6" fill="#0F172A" stroke="#06B6D4" stroke-width="2.5"/>
+  <circle cx="32" cy="32" r="5" fill="#06B6D4"/>
+  <!-- Pins -->
+  <line x1="12" y1="26" x2="18" y2="26" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="12" y1="38" x2="18" y2="38" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="46" y1="26" x2="52" y2="26" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="46" y1="38" x2="52" y2="38" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="26" y1="12" x2="26" y2="18" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="38" y1="12" x2="38" y2="18" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="26" y1="46" x2="26" y2="52" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="38" y1="46" x2="38" y2="52" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+</svg>
