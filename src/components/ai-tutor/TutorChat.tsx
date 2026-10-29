@@ -52,7 +52,9 @@ I can help you:
   const [loading, setLoading] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState<boolean>(false);
-  const [tempApiKey, setTempApiKey] = useState<string>(settings.geminiApiKey || '');
+  const [tempGeminiKey, setTempGeminiKey] = useState<string>(settings.geminiApiKey || '');
+  const [tempOpenaiKey, setTempOpenaiKey] = useState<string>(settings.openaiApiKey || '');
+  const [tempProvider, setTempProvider] = useState<'gemini' | 'chatgpt' | 'demo'>(settings.aiProvider || 'gemini');
 
   const suggestedQuestions = [
     'Explain the difference between analog and digital signals.',
@@ -83,8 +85,11 @@ I can help you:
         message: textToSend,
         mode,
         history: messages,
-        apiKey: settings.geminiApiKey,
-        model: settings.aiModel
+        provider: settings.aiProvider,
+        geminiApiKey: settings.geminiApiKey,
+        openaiApiKey: settings.openaiApiKey,
+        model: settings.aiModel,
+        openaiModel: settings.openaiModel
       });
 
       const assistantMsg: ChatMessage = {
@@ -120,13 +125,17 @@ I can help you:
         content: 'Conversation reset. How can I assist with your ENTC studies today?',
         timestamp: new Date().toLocaleTimeString(),
         suggestedFollowUps: suggestedQuestions.slice(0, 3),
-        isDemoMode: !settings.geminiApiKey
+        isDemoMode: settings.aiProvider === 'demo' || (!settings.geminiApiKey && !settings.openaiApiKey)
       }
     ]);
   };
 
   const handleSaveApiKey = () => {
-    updateSettings({ geminiApiKey: tempApiKey.trim() });
+    updateSettings({ 
+      aiProvider: tempProvider,
+      geminiApiKey: tempGeminiKey.trim(),
+      openaiApiKey: tempOpenaiKey.trim()
+    });
     setShowApiKeyModal(false);
   };
 
@@ -141,13 +150,29 @@ I can help you:
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white">ENTC AI Learning Assistant</h3>
-              {settings.geminiApiKey ? (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
-                  Gemini API Connected
-                </span>
+              {settings.aiProvider === 'chatgpt' ? (
+                settings.openaiApiKey ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                    OpenAI ChatGPT Connected
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                    ChatGPT (Key Needed)
+                  </span>
+                )
+              ) : settings.aiProvider === 'gemini' ? (
+                settings.geminiApiKey ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                    Gemini API Connected
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                    Gemini (Key Needed)
+                  </span>
+                )
               ) : (
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
-                  Demo Knowledge Engine
+                <span className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-bold">
+                  Built-in Knowledge Engine
                 </span>
               )}
             </div>
@@ -160,11 +185,18 @@ I can help you:
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowApiKeyModal(true)}
+            onClick={() => {
+              setTempProvider(settings.aiProvider || 'gemini');
+              setTempGeminiKey(settings.geminiApiKey || '');
+              setTempOpenaiKey(settings.openaiApiKey || '');
+              setShowApiKeyModal(true);
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium transition-colors"
           >
             <Key className="h-3.5 w-3.5 text-cyan-400" />
-            <span>{settings.geminiApiKey ? 'API Configured' : 'Setup Gemini API'}</span>
+            <span>
+              {settings.geminiApiKey || settings.openaiApiKey ? 'Configure APIs' : 'Setup Gemini & ChatGPT'}
+            </span>
           </button>
 
           <button
@@ -310,40 +342,88 @@ I can help you:
         </button>
       </div>
 
-      {/* Gemini API Key Configuration Modal */}
+      {/* AI Key & Provider Configuration Modal */}
       {showApiKeyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl">
-            <div className="flex items-center gap-2.5 mb-3 text-cyan-400">
+          <div className="max-w-lg w-full rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2.5 text-cyan-400">
               <Key className="h-5 w-5" />
-              <h4 className="text-base font-bold text-white">Google Gemini API Configuration</h4>
+              <h4 className="text-base font-bold text-white">AI Engine & API Configuration</h4>
             </div>
 
-            <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-              Connect your free Google Gemini API key to unlock unlimited live generative engineering reasoning across custom circuits, schematics, and datasheets.
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Select your preferred provider and paste your API key to enable live generative engineering tutoring. Keys are kept strictly in your local browser storage.
             </p>
 
-            <div className="mb-4">
+            {/* Provider Picker */}
+            <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                Gemini API Key:
+                Active Provider:
               </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'gemini', label: 'Google Gemini' },
+                  { id: 'chatgpt', label: 'ChatGPT' },
+                  { id: 'demo', label: 'Offline Engine' }
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setTempProvider(p.id as any)}
+                    className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-all text-center ${
+                      tempProvider === p.id
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-sm'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Google Gemini Key */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-300">
+                  Google Gemini API Key:
+                </label>
+                <span className="text-[10px] text-cyan-400 font-mono">aistudio.google.com</span>
+              </div>
               <input
                 type="password"
-                value={tempApiKey}
-                onChange={(e) => setTempApiKey(e.target.value)}
+                value={tempGeminiKey}
+                onChange={(e) => setTempGeminiKey(e.target.value)}
                 placeholder="AIzaSy..."
                 className="w-full py-2 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-200 focus:border-cyan-500 focus:outline-none"
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1 mb-5">
-              <div className="font-semibold text-slate-200">How to get a free API key:</div>
-              <div>1. Visit Google AI Studio at <span className="text-cyan-400 font-mono">aistudio.google.com</span></div>
-              <div>2. Click &quot;Get API key&quot; and create a free project key</div>
-              <div>3. Paste it here. Keys are stored locally in your browser and never sent to third parties.</div>
+            {/* OpenAI Key */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-300">
+                  OpenAI ChatGPT API Key:
+                </label>
+                <span className="text-[10px] text-emerald-400 font-mono">platform.openai.com</span>
+              </div>
+              <input
+                type="password"
+                value={tempOpenaiKey}
+                onChange={(e) => setTempOpenaiKey(e.target.value)}
+                placeholder="sk-..."
+                className="w-full py-2 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-200 focus:border-emerald-500 focus:outline-none"
+              />
             </div>
 
-            <div className="flex items-center justify-end gap-2">
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <div className="font-semibold text-slate-200">Tip:</div>
+              <div>• Free Gemini API keys can be generated at <strong>aistudio.google.com</strong>.</div>
+              <div>• ChatGPT API keys can be created at <strong>platform.openai.com</strong>.</div>
+              <div>• If neither key is entered, the app automatically runs the ENTC offline knowledge engine!</div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 onClick={() => setShowApiKeyModal(false)}
                 className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
@@ -354,7 +434,7 @@ I can help you:
                 onClick={handleSaveApiKey}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs transition-all shadow-md shadow-cyan-500/20"
               >
-                Save & Connect
+                Save Settings
               </button>
             </div>
           </div>

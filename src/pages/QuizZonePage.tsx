@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { HelpCircle, Zap, Award } from 'lucide-react';
 import { QuizPlayer } from '../components/quizzes/QuizPlayer';
 import { LogicGateMiniGame } from '../components/quizzes/LogicGateMiniGame';
+import { useApp } from '../context/AppContext';
 
 export const QuizZonePage: React.FC = () => {
+  const { customQuizzes } = useApp();
   const [activeTab, setActiveTab] = useState<'quizzes' | 'minigame'>('quizzes');
+
+  const totalQuestions = 16 + (customQuizzes?.length || 0);
 
   return (
     <div className="space-y-8">
@@ -34,7 +38,7 @@ export const QuizZonePage: React.FC = () => {
           }`}
         >
           <HelpCircle className="h-4 w-4" />
-          <span>Subject Mastery Quizzes (16 Questions)</span>
+          <span>Subject Mastery Quizzes ({totalQuestions} Questions)</span>
         </button>
 
         <button

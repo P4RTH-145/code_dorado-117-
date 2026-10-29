@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import confetti from 'canvas-confetti';
-import { UserProgress, UserProfile, AppSettings, Badge, RecentActivity, UserAccount } from '../types';
+import { UserProgress, UserProfile, AppSettings, Badge, RecentActivity, UserAccount, CustomSensor, QuizQuestion, ArduinoProject } from '../types';
 import { storageService, DEFAULT_SETTINGS } from '../services/storageService';
 import { authService } from '../services/authService';
 import { INITIAL_BADGES } from '../data/badgesData';
+import { INITIAL_CUSTOM_SENSORS } from '../data/customSensorsData';
+import { INITIAL_ARDUINO_PROJECTS } from '../data/arduinoProjectsData';
 
 interface AppContextType {
   currentUser: UserAccount | null;
@@ -13,6 +15,14 @@ interface AppContextType {
   settings: AppSettings;
   badges: Badge[];
   newBadgeUnlocked: Badge | null;
+  customSensors: CustomSensor[];
+  addCustomSensor: (sensor: CustomSensor) => void;
+  deleteCustomSensor: (id: string) => void;
+  customQuizzes: QuizQuestion[];
+  addCustomQuiz: (q: QuizQuestion) => void;
+  arduinoProjects: ArduinoProject[];
+  addArduinoProject: (proj: ArduinoProject) => void;
+  deleteArduinoProject: (id: string) => void;
   login: (email: string, pass: string) => { success: boolean; error?: string };
   logout: () => void;
   switchAccount: (userId: string) => void;
@@ -44,6 +54,71 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
   const [settings, setSettings] = useState<AppSettings>(() => storageService.loadSettings());
   const [newBadgeUnlocked, setNewBadgeUnlocked] = useState<Badge | null>(null);
+
+  const [customSensors, setCustomSensors] = useState<CustomSensor[]>(() => {
+    try {
+      const saved = localStorage.getItem('entc_custom_sensors');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_CUSTOM_SENSORS;
+  });
+
+  const [customQuizzes, setCustomQuizzes] = useState<QuizQuestion[]>(() => {
+    try {
+      const saved = localStorage.getItem('entc_custom_quizzes');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  const [arduinoProjects, setArduinoProjects] = useState<ArduinoProject[]>(() => {
+    try {
+      const saved = localStorage.getItem('entc_arduino_projects');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_ARDUINO_PROJECTS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('entc_custom_sensors', JSON.stringify(customSensors));
+    } catch {}
+  }, [customSensors]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('entc_custom_quizzes', JSON.stringify(customQuizzes));
+    } catch {}
+  }, [customQuizzes]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('entc_arduino_projects', JSON.stringify(arduinoProjects));
+    } catch {}
+  }, [arduinoProjects]);
+
+  const addCustomSensor = (sensor: CustomSensor) => {
+    setCustomSensors(prev => [sensor, ...prev]);
+    triggerConfetti();
+  };
+
+  const deleteCustomSensor = (id: string) => {
+    setCustomSensors(prev => prev.filter(s => s.id !== id));
+  };
+
+  const addCustomQuiz = (q: QuizQuestion) => {
+    setCustomQuizzes(prev => [q, ...prev]);
+    triggerConfetti();
+  };
+
+  const addArduinoProject = (proj: ArduinoProject) => {
+    setArduinoProjects(prev => [proj, ...prev]);
+    triggerConfetti();
+  };
+
+  const deleteArduinoProject = (id: string) => {
+    setArduinoProjects(prev => prev.filter(p => p.id !== id));
+  };
 
   // Sync settings theme to document root
   useEffect(() => {
@@ -307,6 +382,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         settings,
         badges: badgesWithStatus,
         newBadgeUnlocked,
+        customSensors,
+        addCustomSensor,
+        deleteCustomSensor,
+        customQuizzes,
+        addCustomQuiz,
+        arduinoProjects,
+        addArduinoProject,
+        deleteArduinoProject,
         login,
         logout,
         switchAccount,

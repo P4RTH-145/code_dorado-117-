@@ -4,8 +4,12 @@ export interface AiTutorRequest {
   message: string;
   mode: 'beginner' | 'step-by-step' | 'troubleshoot' | 'coding';
   history: ChatMessage[];
+  provider?: 'gemini' | 'chatgpt' | 'demo';
+  geminiApiKey?: string;
+  openaiApiKey?: string;
   apiKey?: string;
   model?: string;
+  openaiModel?: string;
 }
 
 export interface AiTutorResponse {
@@ -389,12 +393,19 @@ In Electronics and Telecommunication Engineering, addressing this requires exami
 
 export const aiTutorService = {
   async sendMessage(request: AiTutorRequest): Promise<AiTutorResponse> {
-    const { message, mode, apiKey, model = 'gemini-1.5-flash' } = request;
+    const {
+      message,
+      mode,
+      provider = 'demo',
+      geminiApiKey,
+      openaiApiKey,
+      apiKey,
+      model = 'gemini-1.5-flash',
+      openaiModel = 'gpt-4o-mini',
+      history = []
+    } = request;
 
-    // If an API key is provided, attempt live LLM call to Google Gemini
-    if (apiKey && apiKey.trim().length > 10) {
-      try {
-        const systemPrompt = `You are the ENTC Innovate Lab AI Tutor, a friendly, deeply knowledgeable professor and senior hardware/telecom engineer.
+    const systemPrompt = `You are the ENTC Innovate Lab AI Tutor, a friendly, deeply knowledgeable professor and senior hardware/telecom engineer.
 Your explanations are technically accurate, educational, clear, and inspiring.
 Current Mode: ${mode}.
 - If beginner mode: use intuitive analogies, clear language, and avoid overwhelming jargon.
@@ -403,21 +414,132 @@ Current Mode: ${mode}.
 - If coding mode: provide clean, well-commented C++/Arduino, Python, or Verilog/VHDL code with explanations.
 Always maintain good formatting using markdown and LaTeX where helpful.`;
 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    // 1. OpenAI ChatGPT provider
+    if (provider === 'chatgpt' || (!provider && openaiApiKey && !geminiApiKey)) {
+      const activeKey = (openaiApiKey || apiKey || '').trim();
+      if (!activeKey) {
+        return {
+          content: `> [!NOTE]
+> **OpenAI ChatGPT API key required.**
+> Please enter your OpenAI API key (starts with \`sk-...\`) in the top bar or in **Settings** to chat with ChatGPT.
+> 
+> *Meanwhile, here is the answer from the built-in ENTC Knowledge Engine:*
+
+` + generateDemoResponse(message, mode).content,
+          suggestedFollowUps: generateDemoResponse(message, mode).followUps,
+          isDemoMode: true
+        };
+      }
+
+      try {
+        const chatMessages = [
+          { role: 'system', content: systemPrompt },
+          ...history.slice(-6).map(h => ({
+            role: h.sender === 'user' ? 'user' : 'assistant',
+            content: h.content
+          })),
+          { role: 'user', content: message }
+        ];
+
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${activeKey}`
+          },
+          body: JSON.stringify({
+            model: openaiModel || 'gpt-4o-mini',
+            messages: chatMessages,
+            temperature: 0.3,
+            max_tokens: 1200
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const replyText = data?.choices?.[0]?.message?.content;
+          if (replyText) {
+            return {
+              content: replyText,
+              suggestedFollowUps: [
+                'Can you provide a practical circuit schematic for this?',
+                'What are common hardware debugging pitfalls?',
+                'Show me the Arduino implementation code.'
+              ],
+              isDemoMode: false
+            };
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `HTTP ${res.status}`;
+          console.warn('OpenAI API Error:', errMsg);
+          const fallback = generateDemoResponse(message, mode);
+          return {
+            content: `> [!WARNING]
+> **OpenAI ChatGPT API request returned an error** (${res.status}: ${errMsg}).
+> Please check your OpenAI API key and usage quota in Settings.
+> 
+> *Providing curated answer from the offline ENTC Knowledge Engine:*
+
+${fallback.content}`,
+            suggestedFollowUps: fallback.followUps,
+            isDemoMode: true
+          };
+        }
+      } catch (err: any) {
+        console.error('Error invoking OpenAI API:', err);
+        const fallback = generateDemoResponse(message, mode);
+        return {
+          content: `> [!NOTE]
+> Network error reaching OpenAI endpoint: ${err.message || 'Check internet connection'}.
+> Switched to offline ENTC Knowledge Engine.
+
+${fallback.content}`,
+          suggestedFollowUps: fallback.followUps,
+          isDemoMode: true
+        };
+      }
+    }
+
+    // 2. Google Gemini provider
+    if (provider === 'gemini' || (geminiApiKey && geminiApiKey.trim().length > 10) || (apiKey && apiKey.trim().length > 10)) {
+      const activeGeminiKey = (geminiApiKey || apiKey || '').trim();
+      if (!activeGeminiKey) {
+        return {
+          content: `> [!NOTE]
+> **Google Gemini API key required.**
+> Please enter your Gemini API key (from Google AI Studio) in the top bar or in **Settings** to chat with Gemini.
+> 
+> *Meanwhile, here is the answer from the built-in ENTC Knowledge Engine:*
+
+` + generateDemoResponse(message, mode).content,
+          suggestedFollowUps: generateDemoResponse(message, mode).followUps,
+          isDemoMode: true
+        };
+      }
+
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeGeminiKey}`;
         
+        const contents = [
+          ...history.slice(-4).map(h => ({
+            role: h.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: h.content }]
+          })),
+          {
+            role: 'user',
+            parts: [{ text: `${systemPrompt}\n\nStudent Question: ${message}` }]
+          }
+        ];
+
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: `${systemPrompt}\n\nUser Question: ${message}` }]
-              }
-            ],
+            contents,
             generationConfig: {
               temperature: 0.3,
-              maxOutputTokens: 1000
+              maxOutputTokens: 1200
             }
           })
         });
@@ -439,11 +561,10 @@ Always maintain good formatting using markdown and LaTeX where helpful.`;
         } else {
           const errorData = await res.json().catch(() => ({}));
           console.warn('Gemini API returned an error:', errorData);
-          // Fall back to knowledge engine with notice
           const fallback = generateDemoResponse(message, mode);
           return {
             content: `> [!WARNING]
-> Gemini API request failed (${res.status}: ${errorData?.error?.message || 'Check API key or quota'}). 
+> **Gemini API request failed** (${res.status}: ${errorData?.error?.message || 'Check API key or quota'}). 
 > Providing curated answer from ENTC Knowledge Engine below:
 
 ${fallback.content}`,
@@ -465,9 +586,8 @@ ${fallback.content}`,
       }
     }
 
-    // Default: High-Quality Educational ENTC Knowledge Engine Demo Mode
-    // Simulate brief thinking delay for realistic UX
-    await new Promise(r => setTimeout(r, 600));
+    // 3. Built-in High-Quality Educational ENTC Knowledge Engine (Demo / Offline Mode)
+    await new Promise(r => setTimeout(r, 450));
     const demo = generateDemoResponse(message, mode);
     return {
       content: demo.content,

@@ -7,13 +7,18 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   Activity, 
-  Sparkles,
-  Info
+  Sparkles, 
+  Info,
+  Flame,
+  Mic,
+  Cpu,
+  Layers
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const SensorSimulator: React.FC = () => {
-  const [activeSensor, setActiveSensor] = useState<'temp' | 'light' | 'ultrasonic'>('temp');
+  const { completeExperiment, customSensors } = useApp();
+  const [activeSensor, setActiveSensor] = useState<string>('temp');
 
   // Temperature Sensor State (LM35)
   const [temperatureC, setTemperatureC] = useState<number>(28); // -10 to 110 °C
@@ -27,89 +32,133 @@ export const SensorSimulator: React.FC = () => {
   const [distanceCm, setDistanceCm] = useState<number>(35); // 2 to 400 cm
   const [distanceThreshold, setDistanceThreshold] = useState<number>(15); // collision alert <= 15cm
 
-  const { completeExperiment } = useApp();
+  // Dynamic state for custom sensors
+  const [customSensorValues, setCustomSensorValues] = useState<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    customSensors.forEach(s => {
+      map[s.id] = s.defaultVal;
+    });
+    return map;
+  });
 
   // Calculations for LM35
-  // LM35 outputs 10mV / °C. At 28°C -> 280mV = 0.28V.
-  // 10-bit ADC with 5V reference: ADC = (V_out / 5.0) * 1023
   const tempMv = Math.max(0, temperatureC * 10);
   const tempVolts = tempMv / 1000;
   const tempAdc = Math.round((tempVolts / 5.0) * 1023);
   const isTempAlert = temperatureC >= tempThreshold;
 
   // Calculations for LDR
-  // Approximate LDR resistance in 10kΩ voltage divider: R_ldr = 500000 / (lux + 1)
   const rLdr = Math.round(500000 / (ambientLux + 10)); // ohms
   const rFixed = 10000; // 10 kΩ
-  // Voltage divider: V_out = 5V * (R_fixed / (R_ldr + R_fixed))
   const lightVolts = Number((5.0 * (rFixed / (rLdr + rFixed))).toFixed(2));
   const lightAdc = Math.round((lightVolts / 5.0) * 1023);
   const isLightAlert = ambientLux <= lightThreshold;
 
   // Calculations for HC-SR04
-  // Speed of sound = 340 m/s = 0.034 cm/µs. Round trip time t = 2 * d / 0.034 ≈ d * 58.82 µs.
   const pulseDurationUs = Math.round(distanceCm * 58.82);
   const isDistanceAlert = distanceCm <= distanceThreshold;
 
-  const handleSelectSensor = (sensor: 'temp' | 'light' | 'ultrasonic') => {
+  // Current custom sensor (if selected)
+  const currentCustom = customSensors.find(s => s.id === activeSensor);
+  const currentCustomVal = currentCustom 
+    ? (customSensorValues[currentCustom.id] ?? currentCustom.defaultVal) 
+    : 0;
+  const isCustomAlert = currentCustom ? currentCustomVal >= currentCustom.alertThreshold : false;
+  const customVolts = currentCustom 
+    ? Number((((currentCustomVal - currentCustom.minVal) / (currentCustom.maxVal - currentCustom.minVal || 1)) * 5.0).toFixed(2)) 
+    : 0;
+  const customAdc = Math.round((customVolts / 5.0) * 1023);
+
+  const handleSelectSensor = (sensor: string) => {
     setActiveSensor(sensor);
     completeExperiment(`sensor-${sensor}`, `${sensor.toUpperCase()} Sensor Simulator`, 25);
+  };
+
+  const handleCustomValChange = (sensorId: string, val: number) => {
+    setCustomSensorValues(prev => ({ ...prev, [sensorId]: val }));
   };
 
   return (
     <div className="space-y-6">
       {/* Sensor Selection Tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <button
           onClick={() => handleSelectSensor('temp')}
-          className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${
+          className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
             activeSensor === 'temp'
               ? 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 border-amber-500/40 text-amber-300 shadow-md shadow-amber-500/10'
               : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/80'
           }`}
         >
-          <div className="h-10 w-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+          <div className="h-9 w-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
             <Thermometer className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">LM35 Temperature Sensor</div>
-            <div className="text-[11px] text-slate-400">Analog 10 mV/°C Precision</div>
+            <div className="text-xs font-bold text-white">LM35 Temperature</div>
+            <div className="text-[10px] text-slate-400">Analog 10 mV/°C</div>
           </div>
         </button>
 
         <button
           onClick={() => handleSelectSensor('light')}
-          className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${
+          className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
             activeSensor === 'light'
               ? 'bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border-cyan-500/40 text-cyan-300 shadow-md shadow-cyan-500/10'
               : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/80'
           }`}
         >
-          <div className="h-10 w-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+          <div className="h-9 w-9 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
             <Sun className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">LDR Ambient Light Sensor</div>
-            <div className="text-[11px] text-slate-400">Photoresistor Voltage Divider</div>
+            <div className="text-xs font-bold text-white">LDR Light Sensor</div>
+            <div className="text-[10px] text-slate-400">Photoresistor Divider</div>
           </div>
         </button>
 
         <button
           onClick={() => handleSelectSensor('ultrasonic')}
-          className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${
+          className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
             activeSensor === 'ultrasonic'
               ? 'bg-gradient-to-r from-violet-500/15 to-purple-500/15 border-violet-500/40 text-violet-300 shadow-md shadow-violet-500/10'
               : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/80'
           }`}
         >
-          <div className="h-10 w-10 rounded-lg bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400">
+          <div className="h-9 w-9 rounded-lg bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400">
             <Radio className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">HC-SR04 Ultrasonic Sensor</div>
-            <div className="text-[11px] text-slate-400">Sonar Echo Time-of-Flight</div>
+            <div className="text-xs font-bold text-white">HC-SR04 Ultrasonic</div>
+            <div className="text-[10px] text-slate-400">Sonar Time-of-Flight</div>
           </div>
         </button>
+
+        {/* Custom Admin Added Sensors */}
+        {customSensors.map(sensor => {
+          const isFlame = sensor.iconName?.toLowerCase().includes('flame') || sensor.name.toLowerCase().includes('gas');
+          const isMic = sensor.iconName?.toLowerCase().includes('mic') || sensor.name.toLowerCase().includes('sound');
+          const Icon = isFlame ? Flame : isMic ? Mic : Cpu;
+          
+          return (
+            <button
+              key={sensor.id}
+              onClick={() => handleSelectSensor(sensor.id)}
+              className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                activeSensor === sensor.id
+                  ? 'bg-gradient-to-r from-rose-500/15 to-pink-500/15 border-rose-500/40 text-rose-300 shadow-md shadow-rose-500/10'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/80'
+              }`}
+            >
+              <div className="h-9 w-9 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="overflow-hidden">
+                <div className="text-xs font-bold text-white truncate">{sensor.name}</div>
+                <div className="text-[10px] text-slate-400">Pin {sensor.pinNumber} • {sensor.unit}</div>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Main Sensor Workbench */}
@@ -159,6 +208,20 @@ export const SensorSimulator: React.FC = () => {
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     <span>Clear Path</span>
+                  </div>
+                )
+              )}
+
+              {currentCustom && (
+                isCustomAlert ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold animate-pulse">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>THRESHOLD ALERT: {currentCustomVal} {currentCustom.unit} &ge; {currentCustom.alertThreshold} {currentCustom.unit}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>Normal Reading ({currentCustomVal} {currentCustom.unit})</span>
                   </div>
                 )
               )}
@@ -266,6 +329,38 @@ export const SensorSimulator: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {currentCustom && (
+                <div className="flex flex-col items-center gap-4 w-full">
+                  <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-3 max-w-sm w-full shadow-lg">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <span className="text-xs font-mono text-cyan-400 font-bold">
+                        PIN {currentCustom.pinNumber} • {currentCustom.type.toUpperCase()}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                        {currentCustom.unit}
+                      </span>
+                    </div>
+
+                    <div className="py-2">
+                      <div className="text-4xl font-mono font-black text-rose-400">
+                        {currentCustomVal} <span className="text-base font-bold text-rose-300">{currentCustom.unit}</span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Alert Threshold: {currentCustom.alertThreshold} {currentCustom.unit}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-300 leading-relaxed text-left">
+                      {currentCustom.description}
+                    </p>
+
+                    <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono text-right">
+                      Added by: {currentCustom.createdBy}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -329,6 +424,21 @@ export const SensorSimulator: React.FC = () => {
                   </div>
                 </>
               )}
+
+              {currentCustom && (
+                <>
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                    <div className="text-[11px] text-slate-400 mb-1">Simulated Voltage</div>
+                    <div className="text-xl font-mono font-bold text-rose-300">{customVolts} V</div>
+                    <div className="text-[10px] text-slate-400 mt-1">ADC Pin {currentCustom.pinNumber}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                    <div className="text-[11px] text-slate-400 mb-1">10-Bit ADC Count</div>
+                    <div className="text-xl font-mono font-bold text-cyan-300">{customAdc}</div>
+                    <div className="text-[10px] text-slate-400 mt-1">out of 1023</div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Formula Explanatory note */}
@@ -342,11 +452,35 @@ export const SensorSimulator: React.FC = () => {
               {activeSensor === 'ultrasonic' && (
                 <div>Distance = (Pulse_Duration_µs / 58.82) = {distanceCm} cm</div>
               )}
+              {currentCustom && (
+                <div>{currentCustom.formula}</div>
+              )}
             </div>
           </div>
 
           {/* Interactive Sliders Panel */}
           <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 shadow-lg space-y-4">
+            {currentCustom && (
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-slate-300">{currentCustom.name}</span>
+                  <span className="font-mono text-rose-400 font-bold">{currentCustomVal} {currentCustom.unit}</span>
+                </div>
+                <input
+                  type="range"
+                  min={currentCustom.minVal}
+                  max={currentCustom.maxVal}
+                  value={currentCustomVal}
+                  onChange={(e) => handleCustomValChange(currentCustom.id, parseInt(e.target.value))}
+                  className="w-full accent-rose-400 bg-slate-800 h-2 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
+                  <span>{currentCustom.minVal} {currentCustom.unit}</span>
+                  <span className="text-rose-400 font-bold">Alert: &ge; {currentCustom.alertThreshold} {currentCustom.unit}</span>
+                  <span>{currentCustom.maxVal} {currentCustom.unit}</span>
+                </div>
+              </div>
+            )}
             {activeSensor === 'temp' && (
               <>
                 <div>

@@ -31,17 +31,19 @@ export const QuizPlayer: React.FC = () => {
   const [quizFinished, setQuizFinished] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<number>(30); // 30 seconds per question
 
-  const { recordQuizScore, progress } = useApp();
+  const { recordQuizScore, progress, customQuizzes } = useApp();
+
+  const allQuestions = [...QUIZ_QUESTIONS, ...(customQuizzes || [])];
 
   // Filter questions based on selection
-  const filteredPool = QUIZ_QUESTIONS.filter((q) => {
+  const filteredPool = allQuestions.filter((q) => {
     if (selectedSubject !== 'all' && q.subject !== selectedSubject) return false;
     if (selectedDifficulty !== 'all' && q.difficulty !== selectedDifficulty) return false;
     return true;
   });
 
   const startQuiz = () => {
-    const questions = filteredPool.length > 0 ? filteredPool : QUIZ_QUESTIONS;
+    const questions = filteredPool.length > 0 ? filteredPool : allQuestions;
     setActiveQuestions(questions);
     setCurrentIndex(0);
     setSelectedOption(null);

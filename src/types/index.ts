@@ -130,8 +130,11 @@ export interface UserProfile {
 
 export interface AppSettings {
   theme: 'dark' | 'light' | 'midnight';
+  aiProvider: 'gemini' | 'chatgpt' | 'demo';
   geminiApiKey: string;
   aiModel: string;
+  openaiApiKey: string;
+  openaiModel: string;
   soundEffects: boolean;
   autoSave: boolean;
   useLocalStorage: boolean;
@@ -159,4 +162,31 @@ export interface UserAccount {
   role: UserRole;
   profile: UserProfile;
   createdAt: string;
+}
+
+export interface CustomSensor {
+  id: string;
+  name: string;
+  type: 'analog' | 'digital';
+  unit: string;
+  minVal: number;
+  maxVal: number;
+  defaultVal: number;
+  alertThreshold: number;
+  formula: string;
+  description: string;
+  pinNumber: string;
+  iconName: string;
+  createdBy: string;
+}
+
+export interface ArduinoProject {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  sketchCode: string;
+  connectedPin: number;
+  actuatorType: 'led' | 'buzzer' | 'relay' | 'motor';
+  sensorInputType: 'potentiometer' | 'button' | 'analog-temp';
 }

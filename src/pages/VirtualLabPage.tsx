@@ -6,14 +6,16 @@ import {
   Sparkles, 
   Activity, 
   Info,
-  Sliders
+  Sliders,
+  Layers
 } from 'lucide-react';
 import { LogicGateSimulator } from '../components/circuit/LogicGateSimulator';
 import { LedCircuitSimulator } from '../components/circuit/LedCircuitSimulator';
 import { SensorSimulator } from '../components/circuit/SensorSimulator';
+import { ArduinoSimulator } from '../components/circuit/ArduinoSimulator';
 
 export const VirtualLabPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'gates' | 'led' | 'sensors'>('gates');
+  const [activeTab, setActiveTab] = useState<'gates' | 'led' | 'sensors' | 'arduino'>('gates');
 
   return (
     <div className="space-y-8">
@@ -67,7 +69,19 @@ export const VirtualLabPage: React.FC = () => {
           }`}
         >
           <Thermometer className="h-4 w-4" />
-          <span>C. Sensor Simulator (LM35, LDR, HC-SR04)</span>
+          <span>C. Sensor Simulator (LM35, LDR, HC-SR04 & Custom)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('arduino')}
+          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === 'arduino'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 scale-[1.02]'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Layers className="h-4 w-4" />
+          <span>D. Arduino Project Workbench</span>
         </button>
       </div>
 
@@ -75,6 +89,7 @@ export const VirtualLabPage: React.FC = () => {
       {activeTab === 'gates' && <LogicGateSimulator />}
       {activeTab === 'led' && <LedCircuitSimulator />}
       {activeTab === 'sensors' && <SensorSimulator />}
+      {activeTab === 'arduino' && <ArduinoSimulator />}
     </div>
   );
 };

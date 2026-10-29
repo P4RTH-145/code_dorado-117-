@@ -27,8 +27,11 @@ export const SettingsPage: React.FC = () => {
   const { profile, updateProfile, settings, updateSettings, progress, resetProgress } = useApp();
 
   const [formData, setFormData] = useState({ ...profile });
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'chatgpt' | 'demo'>(settings.aiProvider || 'gemini');
   const [apiKey, setApiKey] = useState(settings.geminiApiKey || '');
   const [aiModel, setAiModel] = useState(settings.aiModel || 'gemini-1.5-flash');
+  const [openaiApiKey, setOpenaiApiKey] = useState(settings.openaiApiKey || '');
+  const [openaiModel, setOpenaiModel] = useState(settings.openaiModel || 'gpt-4o-mini');
   const [supabaseUrl, setSupabaseUrl] = useState(settings.supabaseUrl || '');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState(settings.supabaseAnonKey || '');
   const [testingSupabase, setTestingSupabase] = useState(false);
@@ -42,8 +45,11 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     updateProfile(formData);
     updateSettings({ 
+      aiProvider,
       geminiApiKey: apiKey.trim(), 
       aiModel,
+      openaiApiKey: openaiApiKey.trim(),
+      openaiModel,
       supabaseUrl: supabaseUrl.trim(),
       supabaseAnonKey: supabaseAnonKey.trim()
     });
@@ -308,55 +314,117 @@ export const SettingsPage: React.FC = () => {
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Key className="h-5 w-5 text-cyan-400" />
-              <h3 className="text-base font-bold text-white">Google Gemini AI Engine Integration</h3>
+              <h3 className="text-base font-bold text-white">AI Assistant Provider & API Keys</h3>
             </div>
-            <span className="text-xs font-mono text-cyan-400">SECURE LOCAL KEY</span>
+            <span className="text-xs font-mono text-cyan-400">GEMINI & CHATGPT READY</span>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                Gemini API Key:
-              </label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Paste AIzaSy... key from Google AI Studio"
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-200 focus:border-cyan-500 focus:outline-none"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Leave blank to automatically use the high-quality built-in ENTC Educational Knowledge Engine.
-              </p>
+          {/* Provider Selection Tabs */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 block mb-2">
+              Active AI Tutor Provider:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                { id: 'gemini', label: 'Google Gemini', desc: 'Fast, multimodal & free tier' },
+                { id: 'chatgpt', label: 'OpenAI ChatGPT', desc: 'GPT-4o & GPT-4o-mini' },
+                { id: 'demo', label: 'Built-in Engine', desc: 'Zero API keys required' }
+              ].map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setAiProvider(p.id as any)}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    aiProvider === p.id
+                      ? 'bg-cyan-500/10 border-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                  }`}
+                >
+                  <div className="text-xs font-bold text-white">{p.label}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{p.desc}</div>
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                Selected Model:
-              </label>
-              <select
-                value={aiModel}
-                onChange={(e) => setAiModel(e.target.value)}
-                className="w-full py-2 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:border-cyan-500 focus:outline-none"
-              >
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recommended: Ultra-fast & Free)</option>
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Next-Gen High Performance)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Complex Reasoning)</option>
-              </select>
-            </div>
-
-            {/* Step-by-step setup guide */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-2">
-              <div className="font-bold text-slate-200 flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-cyan-400" />
-                <span>How to obtain a free Gemini API Key:</span>
+          <div className="space-y-4 pt-2">
+            {/* Google Gemini Config */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-cyan-300">Google Gemini Configuration</span>
+                <span className="text-[10px] text-slate-400">Free at aistudio.google.com</span>
               </div>
-              <ol className="list-decimal list-inside space-y-1 text-slate-400 text-[11px] leading-relaxed">
-                <li>Go to <strong className="text-cyan-400 font-mono">aistudio.google.com</strong> and sign in with your Google account.</li>
-                <li>Click the blue &quot;Get API key&quot; button in the top left corner.</li>
-                <li>Create a key in a new or existing Google Cloud project (free tier gives 15 RPM).</li>
-                <li>Copy the key and paste it above, then click <strong>Save Settings</strong>.</li>
-              </ol>
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  Gemini API Key:
+                </label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Paste AIzaSy... key from Google AI Studio"
+                  className="w-full py-2 px-3 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-cyan-200 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  Gemini Model:
+                </label>
+                <select
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                  className="w-full py-2 px-3 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:border-cyan-500 focus:outline-none"
+                >
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (Ultra-fast & Recommended)</option>
+                  <option value="gemini-2.0-flash">Gemini 2.0 Flash (Next-Gen High Performance)</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Complex Reasoning)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* OpenAI ChatGPT Config */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-300">OpenAI ChatGPT Configuration</span>
+                <span className="text-[10px] text-slate-400">From platform.openai.com</span>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  OpenAI API Key:
+                </label>
+                <input
+                  type="password"
+                  value={openaiApiKey}
+                  onChange={(e) => setOpenaiApiKey(e.target.value)}
+                  placeholder="Paste sk-... key from OpenAI Platform"
+                  className="w-full py-2 px-3 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-200 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  ChatGPT Model:
+                </label>
+                <select
+                  value={openaiModel}
+                  onChange={(e) => setOpenaiModel(e.target.value)}
+                  className="w-full py-2 px-3 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                >
+                  <option value="gpt-4o-mini">GPT-4o Mini (Affordable, Super Fast & Accurate)</option>
+                  <option value="gpt-4o">GPT-4o (Omni High Intelligence)</option>
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy Fast)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Info note */}
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 space-y-1">
+              <div className="font-semibold text-slate-200 flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+                <span>Security Notice:</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                All API keys are saved strictly inside your browser&apos;s localStorage and are only transmitted directly to the official Google or OpenAI endpoints. They are never transmitted or logged elsewhere.
+              </p>
             </div>
           </div>
         </div>
