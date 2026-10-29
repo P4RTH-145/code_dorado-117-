@@ -92,7 +92,7 @@ export const LedCircuitSimulator: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-white">Ohm's Law LED Circuit Experiment</h3>
             <p className="text-xs text-slate-400">
-              Model: $I = \\frac{V_{in} - V_f}{R}$, Forward Voltage $V_f = {vf}\\text{V}$
+              Model: I = (V_in - V_f) / R, Forward Voltage V_f = {vf} V
             </p>
           </div>
         </div>

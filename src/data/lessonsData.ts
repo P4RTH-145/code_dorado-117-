@@ -1,4 +1,4 @@
-import { LessonContent } from '../types';
+import { LessonContent, SubjectCategory } from '../types';
 
 export const LESSONS_DATA: LessonContent[] = [
   {
